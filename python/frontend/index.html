@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enterprise Microservices Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background: #f4f6f9; color: #333; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .grid { display: flex; gap: 20px; }
+        .col { flex: 1; }
+        button { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin: 2px; }
+        button:hover { background: #0056b3; }
+        button.btn-danger { background: #dc3545; }
+        button.btn-danger:hover { background: #bd2130; }
+        button.btn-success { background: #28a745; }
+        button.btn-success:hover { background: #218838; }
+        input, select { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        pre { background: #272822; color: #f8f8f2; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; }
+        .form-group { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>Enterprise Microservices Control Dashboard</h2>
+
+    <div class="card">
+        <h3>Step 1: Security Context (JWT Bearer Token)</h3>
+        <input type="text" id="jwtToken" placeholder="Paste your signed JWT Token here">
+    </div>
+
+    <div class="grid">
+        <div class="col card">
+            <h3>Container 1: Employee Management (SQL DB)</h3>
+            
+            <div style="background: #e9ecef; padding: 15px; border-radius: 6px;">
+                <h4 id="formTitle">Add New Employee</h4>
+                <input type="hidden" id="empId">
+                <div class="form-group"><input type="text" id="empName" placeholder="Full Name"></div>
+                <div class="form-group"><input type="text" id="empRole" placeholder="Role (e.g. Architect)"></div>
+                <div class="form-group"><input type="text" id="empDept" placeholder="Department"></div>
+                <button class="btn-success" id="saveEmpBtn" onclick="saveEmployee()">Submit Entry</button>
+                <button onclick="clearEmployeeForm()" style="background:#6c757d;">Cancel</button>
+            </div>
+
+            <button style="margin-top: 15px; width: 100%;" onclick="fetchEmployees()">🔄 Refresh Employee Table</button>
+            
+            <table id="employeeTable">
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Role</th><th>Department</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" style="text-align:center; color:#888;">No data fetched yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col card">
+            <h3>Container 2: Cache Management (Redis Store)</h3>
+            
+            <div style="background: #e9ecef; padding: 15px; border-radius: 6px;">
+                <h4>Write / Update Cache Pair</h4>
+                <div class="form-group"><input type="text" id="cacheKey" placeholder="Cache Key"></div>
+                <div class="form-group"><input type="text" id="cacheValue" placeholder="Value Data"></div>
+                <button class="btn-success" onclick="writeCache()">Commit to Redis</button>
+            </div>
+
+            <button style="margin-top: 15px; width: 100%;" onclick="fetchAllCache()">🔄 Fetch All Keys from Redis</button>
+
+            <table id="cacheTable">
+                <thead>
+                    <tr><th>Key</th><th>Value</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="3" style="text-align:center; color:#888;">No cache keys listed.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>System Log Output</h3>
+        <pre id="sysLog">System initialized. Awaiting authorization token and action request...</pre>
+    </div>
+
+    <script>
+        function getHeaders() {
+            const token = document.getElementById('jwtToken').value;
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        function log(message) {
+            document.getElementById('sysLog').textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+
+        // ==========================================
+        // CONTAINER 1: SQL COMPONENT OPERATIONS
+        // ==========================================
+        async function fetchEmployees() {
+            try {
+                const res = await fetch('/api/employees', { headers: getHeaders() });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                const result = await res.json();
+                
+                const tbody = document.querySelector('#employeeTable tbody');
+                tbody.innerHTML = '';
+                
+                result.data.forEach(emp => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${emp.id}</td>
+                            <td>${emp.name}</td>
+                            <td>${emp.role}</td>
+                            <td>${emp.department}</td>
+                            <td>
+                                <button onclick="populateEmployeeForm(${emp.id}, '${emp.name}', '${emp.role}', '${emp.department}')">Edit</button>
+                                <button class="btn-danger" onclick="deleteEmployee(${emp.id})">Delete</button>
+                            </td>
+                        </tr>`;
+                });
+                log("Successfully retrieved employee collection from SQL database.");
+            } catch (err) { log("SQL Read Failure: " + err.message); }
+        }
+
+        async function saveEmployee() {
+            const id = document.getElementById('empId').value;
+            const payload = {
+                name: document.getElementById('empName').value,
+                role: document.getElementById('empRole').value,
+                department: document.getElementById('empDept').value
+            };
+
+            const url = id ? `/api/employees/${id}` : '/api/employees';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                log(`Employee record ${id ? 'updated' : 'inserted'} successfully.`);
+                clearEmployeeForm();
+                fetchEmployees();
+            } catch (err) { log("SQL Write/Update Failure: " + err.message); }
+        }
+
+        async function deleteEmployee(id) {
+            if (!confirm("Delete this entry?")) return;
+            try {
+                const res = await fetch(`/api/employees/${id}`, { method: 'DELETE', headers: getHeaders() });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                log(`Deleted employee item ID: ${id}`);
+                fetchEmployees();
+            } catch (err) { log("SQL Delete Failure: " + err.message); }
+        }
+
+        function populateEmployeeForm(id, name, role, dept) {
+            document.getElementById('formTitle').textContent = "Update Employee Details";
+            document.getElementById('empId').value = id;
+            document.getElementById('empName').value = name;
+            document.getElementById('empRole').value = role;
+            document.getElementById('empDept').value = dept;
+        }
+
+        function clearEmployeeForm() {
+            document.getElementById('formTitle').textContent = "Add New Employee";
+            document.getElementById('empId').value = '';
+            document.getElementById('empName').value = '';
+            document.getElementById('empRole').value = '';
+            document.getElementById('empDept').value = '';
+        }
+
+        // ==========================================
+        // CONTAINER 2: REDIS COMPONENT OPERATIONS
+        // ==========================================
+        async function fetchAllCache() {
+            try {
+                const res = await fetch('/api/cache', { headers: getHeaders() });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                const cacheData = await res.json();
+                
+                const tbody = document.querySelector('#cacheTable tbody');
+                tbody.innerHTML = '';
+                
+                Object.keys(cacheData.data).forEach(key => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${key}</strong></td>
+                            <td>${cacheData.data[key]}</td>
+                            <td>
+                                <button onclick="populateCacheForm('${key}', '${cacheData.data[key]}')">Edit</button>
+                                <button class="btn-danger" onclick="deleteCache('${key}')">Delete</button>
+                            </td>
+                        </tr>`;
+                });
+                log("Flushed and reloaded active keys from Redis engine.");
+            } catch (err) { log("Redis Read Failure: " + err.message); }
+        }
+
+        async function writeCache() {
+            const key = document.getElementById('cacheKey').value;
+            const value = document.getElementById('cacheValue').value;
+            try {
+                const res = await fetch('/api/cache', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ key, value })
+                });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                log(`Committed cache pairing [${key} -> ${value}] to Redis database.`);
+                document.getElementById('cacheKey').value = '';
+                document.getElementById('cacheValue').value = '';
+                fetchAllCache();
+            } catch (err) { log("Redis Write Failure: " + err.message); }
+        }
+
+        async function deleteCache(key) {
+            if (!confirm(`Evict key "${key}" from cache?`)) return;
+            try {
+                const res = await fetch(`/api/cache/${key}`, { method: 'DELETE', headers: getHeaders() });
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                log(`Evicted key sequence "${key}" from cache system memory.`);
+                fetchAllCache();
+            } catch (err) { log("Redis Delete Failure: " + err.message); }
+        }
+
+        function populateCacheForm(key, value) {
+            document.getElementById('cacheKey').value = key;
+            document.getElementById('cacheValue').value = value;
+        }
+    </script>
+</body>
+</html>
