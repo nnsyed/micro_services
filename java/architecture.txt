@@ -1,0 +1,143 @@
+                       ┌─────────────────────────────────┐
+                       │     Container 3: Frontend UI              │ (HTML/JS Static Web Server)
+                       └────────────────┬────────────────┘
+                                             │ (Browser Traffic via Port 80)
+                                             ▼
+                       ┌─────────────────────────────────┐
+                       │     Front-Ending API Server               │ (Reverse Proxy & Token Verification)
+                       └───────┬─────────────────┬───────┘
+                                  │                       │
+               /api/employees/    │                       │ /api/cache/
+                                  ▼                       ▼
+                       ┌───────────────┐ ┌───────────────┐
+                       │  Container 1       │ │  Container 2      │
+                       │ Employee Biz       │ │ Cache Service     │
+                       └───────┬───────┘ └───────┬───────┘
+                                  │                       │
+                                  ▼                       ▼
+                       ┌───────────────┐ ┌───────────────┐
+                       │ SQL Database      │ │ Redis Database     │
+                       └───────────────┘ └───────────────┘
+
+
+
+java-stack/
+│
+├── docker-compose.yml               # Orchestrates all 5 containers
+├── nginx.conf                       # Front-ending API Server routing configuration
+│
+├── db-init/                         # Automated SQL database schema setup
+│   └── init.sql                     # Table definitions & data seed script
+│
+├── frontend/                        # Container 3 (UI Engine)
+│   ├── Dockerfile                   # Serves index.html via lightweight NGINX
+│   └── index.html                   # HTML5/JS Dashboard with full CRUD forms
+│
+├── employee-service/                # Container 1 (SQL Business Layer)
+│   ├── pom.xml                      # Maven dependencies (Web, JPA, Security, Postgres)
+│   ├── Dockerfile                   # Multi-stage Maven compilation & runtime build
+│   └── src/
+│       └── main/
+│           ├── java/
+│           │   └── com/
+│           │       └── demo/
+│           │           └── employeeservice/
+│           │               ├── EmployeeServiceApplication.java  # Main Boot class
+│           │               ├── Employee.java                    # JPA Entity Model
+│           │               ├── EmployeeRepository.java          # JPA Data Access Repository
+│           │               ├── EmployeeController.java          # REST Endpoints (CRUD)
+│           │               └── SecurityConfig.java              # JWT Bearer Token validation
+│           └── resources/
+│               └── application.properties                       # App configurations (Port 8001)
+│
+└── cache-service/                   # Container 2 (Redis Cache Layer)
+    ├── pom.xml                      # Maven dependencies (Web, Redis, Security)
+    ├── Dockerfile                   # Multi-stage build container script
+    └── src/
+        └── main/
+            ├── java/
+            │   └── com/
+            │       └── demo/
+            │           └── cacheservice/
+            │               ├── CacheServiceApplication.java     # Main Boot class
+            │               ├── CacheController.java             # Redis Keyspace Endpoints
+            │               └── SecurityConfig.java              # JWT Bearer Token validation
+            └── resources/
+                └── application.properties                       # App configurations (Port 8002)
+
+------------------------------
+Container architecture
+------------------------------
+---------------------------------------------------------------------------------------------------
+Container Name	Service Component	Operational Role & Mechanics
+---------------------------------------------------------------------------------------------------
+1. java-api-gateway-1	Nginx Reverse Proxy	The Switchboard: Exposes port 80 to your Windows host. 
+                                                It inspects incoming URL paths. If a path starts with 
+                                                /employees or /cache, it proxies that traffic internally 
+                                                to the correct microservice. Anything else defaults to the UI.
+2. java-frontend-ui-1	Nginx Static Server	The Presentation Layer: Houses your 11,475-byte index.html 
+                                                dashboard. It sits quietly inside the internal network on 
+                                                port 80, serving assets only when the API Gateway forwards 
+                                                requests to it.
+3. java-employee-service-1 Spring Boot (Java)	The Core Business Engine: Manages employee records. 
+                                                On startup, it connects to PostgreSQL, builds/verifies tables, 
+                                                handles business logic via JPA, and exposes endpoints internally 
+                                                on port 8001.
+4. java-cache-service-1	Spring Boot (Java/Python) The Performance Layer: Handles fast key-value operations. It 
+                                                processes transient state data or lookups, communicating directly 
+                                                with Redis on port 6379 and exposing its internal interface on 
+                                                port 8002.
+5. java-sql-db-1	PostgreSQL Engine	The Relational Ledger: Holds your structured data (like Alice, Bob, 
+                                                and Charlie) inside the employeedb. It uses a persistent Docker 
+                                                volume (pgdata) so your data survives container restarts.
+6. java-redis-db-1	Redis In-Memory DB	The Cache Accelerator: A lightning-fast, key-value memory engine. 
+                                                It doesn't use complex SQL queries; it stores structural string 
+                                                pairs (like debug_key: "it_works") in RAM for immediate retrieval.
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+PS C:\Users\nasee> docker ps
+-------------------------------------------------------------------------------------------------------------------------------------
+CONTAINER ID   IMAGE                   COMMAND                  PORTS                                         NAMES
+-------------------------------------------------------------------------------------------------------------------------------------
+b7859e4718e0   nginx:alpine            "/docker-entrypoint.…"   0.0.0.0:80->80/tcp, [::]:80->80/tcp           java-api-gateway-1
+0c55c19898d5   java-cache-service      "java -jar app.jar"      0.0.0.0:8002->8002/tcp, [::]:8002->8002/tcp   java-cache-service-1
+118a033ce0ce   java-employee-service   "java -jar app.jar"      0.0.0.0:8001->8001/tcp, [::]:8001->8001/tcp   java-employee-service-1
+2fde09241eba   postgres:15-alpine      "docker-entrypoint.s…"   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp   java-sql-db-1
+6ac67546c7f8   nginx:alpine            "/docker-entrypoint.…"   80/tcp                                        java-frontend-ui-1
+89c05897f3cf   redis:7-alpine          "docker-entrypoint.s…"   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp   java-redis-db-1
+-------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------
+
+
+Core Application Code Summary
+------------------------------
+File Path / Component			Language / Type		Structural Responsibility & Detailed Behavior
+----------------------------------------------------------------------------------------------------------------------------
+Employee.java				Java (JPA Entity)	Database Model: Maps a Java object to the physical 
+								PostgreSQL table. Uses @Entity and @Table(name="employees") 
+								annotations to dictate column structures (id, name, role, 
+								department) to Hibernate.
+
+EmployeeRepository.java			Java (Spring Data)	Data Access Layer: An interface extending JpaRepository. It 
+								requires no boilerplate SQL code; Spring automatically generates 
+								the underlying database queries (SELECT, INSERT, UPDATE) at runtime.
+
+EmployeeController.java			Java (Spring REST)	API Router: Exposes HTTP paths (like /employees). It intercept calls 
+								forwarded by Nginx, commands the Repository to fetch data from Postgres, 
+								and converts the Java output into standard JSON payloads.
+
+CacheController.java			Java (Spring REST)	Cache Interface: Exposes the /cache/{key} endpoint. It injects a 
+								StringRedisTemplate to talk straight to Redis. It handles the 404 Key 
+								Not Found errors and maps successful lookups into a clean JSON response.
+
+
+nginx.conf				Configuration		Gateway Rules: Written in Nginx syntax. Contains a server block listening on 
+								port 80. Uses location matching rules and proxy_pass directives to translate 
+								host requests into internal container URLs.
+
+application.properties			Configuration		Spring Environment: Tells Spring Boot exactly how to find its infrastructure. 
+								It contains the raw connection strings (jdbc:postgresql://sql-db:5432/employeedb) 
+								and instructs Hibernate to update schemas dynamically via ddl-auto=update.
+
+

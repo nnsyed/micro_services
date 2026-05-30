@@ -1,0 +1,107 @@
+services:
+  # 1. CORE API GATEWAY
+  api-gateway:
+    image: nginx:alpine
+    container_name: java-api-gateway-1
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # FORCE DISABLING THE DEFAULT CONF OVERRIDE:
+      - /dev/null:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - employee-service
+      - cache-service
+      - frontend-ui
+    networks:
+      - microservices-network
+
+  # 2. FRONTEND USER INTERFACE
+  frontend-ui:
+    image: nginx:alpine
+    container_name: java-frontend-ui-1
+    user: root
+    expose:
+      - "80"
+    volumes:
+      # This mounts your actual frontend directory into the frontend web server container
+      - ./frontend:/usr/share/nginx/html:ro
+    networks:
+      - microservices-network
+
+  # 3. EMPLOYEE MICROSERVICE (Mapped to Windows Host Port 8001)
+  employee-service:
+    build:
+      context: ./employee-service
+      dockerfile: Dockerfile
+    container_name: java-employee-service-1
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVER_PORT=8001
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://sql-db:5432/employeedb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=mysecretpassword
+    depends_on:
+      sql-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+
+  # 4. CACHE MICROSERVICE (Mapped to Windows Host Port 8002)
+  cache-service:
+    build:
+      context: ./cache-service
+      dockerfile: Dockerfile
+    container_name: java-cache-service-1
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVER_PORT=8002
+      - SPRING_DATA_REDIS_HOST=redis-db
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      redis-db:
+        condition: service_started
+    networks:
+      - microservices-network
+
+  # 5. POSTGRESQL DATABASE ENGINE
+  sql-db:
+    image: postgres:15-alpine
+    container_name: java-sql-db-1
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=employeedb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d employeedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  # 6. REDIS INSTANCE
+  redis-db:
+    image: redis:7-alpine
+    container_name: java-redis-db-1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,47 @@
+The Correct jwt.io Setup
+
+Go back to jwt.io and configure the three boxes on the right side exactly like this:
+1. HEADER (Algorithms & Token Type)
+
+Leave this exactly as it is by default. It tells the microservice how the token was encrypted.
+JSON
+
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+
+2. PAYLOAD (Data / Claims)
+
+This is where your business data goes. Completely delete the default text and paste only your user data here:
+JSON
+
+{
+  "sub": "test_admin"
+}
+
+3. VERIFY SIGNATURE (The Secret Key)
+
+At the bottom right, there is a text box that says secret.
+
+    Check the box that says secret base64 encoded so that it is UNCHECKED (you want plain text).
+
+    Type your secret key exactly as it is in your code:
+
+        For the Python Stack: super-secret-key-for-training
+
+        For the Java Stack: super-secret-key-for-training-must-be-32-bytes-long!!
+
+How to Tell if it Worked
+
+Look at the left side of the screen where the encoded token is generated.
+
+    The first part (in red) represents your Header.
+
+    The second part (in purple) represents your Payload.
+
+    The third part (in blue) is your cryptographic signature.
+
+The token you generated before started with eyJhbGciOiJIUzI1NiIsInR5cCI6.... A correctly generated token with just {"sub": "test_admin"} in the payload will look noticeably different in the middle section.
+
+Copy that newly generated token and try your curl command or UI login again—it will now pass through the microservice's security layer cleanly!

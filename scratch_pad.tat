@@ -1,0 +1,98 @@
+docker compose down
+docker compose up --build -d
+
+docker logs python-employee-service-1
+docker compose logs employee-service
+
+
+docker compose up --build
+docker-compose up --build
+docker-compose up --build
+
+docker compose build --no-cache
+docker compose up --build -d cache-service
+
+
+
+# check db
+docker compose exec -it sql-db psql -U postgres -d company
+
+# check redis
+docker compose exec -it redis-db redis-cli
+
+#
+docker compose exec -it api-gateway /bin/sh
+
+docker compose exec -it api-gateway /bin/sh
+
+
+
+
+
+docker compose exec -it redis-db redis-cli SET debug_key "it_works"
+
+
+
+
+===================================================================
+# Docker cleanup
+docker compose down --v --remove-orphans
+
+docker compose down
+
+docker system prune -a --volumes -f
+
+docker compose up --build
+
+---------------------------------------------------------------------
+docker compose exec api-gateway cat /etc/nginx/nginx.conf
+docker compose logs api-gateway
+# 1. Open a shell terminal inside the API Gateway container
+docker compose exec api-gateway ping employee-service -c 4
+
+# 2. Test connectivity to the Cache service
+docker compose exec api-gateway ping cache-service -c 4
+docker compose exec api-gateway nginx -tcurl -H "Authorization: Bearer <YOUR_GENERATED_TOKEN>" http://localhost/api/employees
+# Expected Response: {"status":"success","data":[...]}
+
+curl -X GET http://localhost:8001/employees \
+  -H "Authorization: Bearer <PASTE_YOUR_JWT_HERE>"
+
+curl -X POST http://localhost:8002/cache \
+  -H "Authorization: Bearer <PASTE_YOUR_JWT_HERE>" \
+  -H "Content-Type: application/json" \
+  -d '{"key": "test_ui", "value": "hello"}'
+
+curl -X GET http://localhost:8001/employees -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2FkbWluIn0.xCP7dvnw6GugzHPbTbF0L0Nsm5JSHHY-52Bniypn7Yk"
+curl -X GET http://localhost:8002/cache/debug_key -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2FkbWluIn0.xCP7dvnw6GugzHPbTbF0L0Nsm5JSHHY-52Bniypn7Yk"
+
+SQL Employees Data: http://localhost/api/employees
+
+Redis Cache Operations: http://localhost/cache
+SQL Employees Data: http://localhost/api/employees
+
+http://localhost
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2FkbWluIn0.tXyjKKQyN-JJC_yZWKnroqI6_1hg8kBAQAFt7EwMXv0
+
+
+docker compose exec -it redis-db redis-cli
+
+
+Write a test key: SET debug_key "it_works" (Redis should return OK).
+Read the test key: GET debug_key (Redis should return "it_works").
+Exit the Redis terminal: exit
+
+docker compose exec -it sql-db psql -U postgres -d employeedb
+
+
+List all tables: \dt (You should see the employees table).
+Query the table records: SELECT * FROM employees; (You should see the 3 seeded rows).
+Exit the database terminal: \q
+
+
+curl -X GET http://localhost/ -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2FkbWluIn0.tXyjKKQyN-JJC_yZWKnroqI6_1hg8kBAQAFt7EwMXv0"
+curl -X GET http://localhost:8001/employees -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2FkbWluIn0.tXyjKKQyN-JJC_yZWKnroqI6_1hg8kBAQAFt7EwMXv0"
+curl -X GET http://localhost:8002/cache/debug_key -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2FkbWluIn0.tXyjKKQyN-JJC_yZWKnroqI6_1hg8kBAQAFt7EwMXv0"
+
+
