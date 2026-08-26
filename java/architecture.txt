@@ -1,22 +1,22 @@
                        ┌─────────────────────────────────┐
-                       │     Container 3: Frontend UI              │ (HTML/JS Static Web Server)
+                       │     Container 3: Frontend UI    │ (HTML/JS Static Web Server)
                        └────────────────┬────────────────┘
-                                             │ (Browser Traffic via Port 80)
-                                             ▼
+                                        │ (Browser Traffic via Port 80)
+                                        ▼
                        ┌─────────────────────────────────┐
-                       │     Front-Ending API Server               │ (Reverse Proxy & Token Verification)
+                       │     Front-Ending API Server     │ (Reverse Proxy & Token Verification)
                        └───────┬─────────────────┬───────┘
-                                  │                       │
-               /api/employees/    │                       │ /api/cache/
-                                  ▼                       ▼
+                               │                 │
+               /api/employees/ │                 │ /api/cache/
+                               ▼                 ▼
                        ┌───────────────┐ ┌───────────────┐
-                       │  Container 1       │ │  Container 2      │
-                       │ Employee Biz       │ │ Cache Service     │
+                       │  Container 1  │ | Container 2   │
+                       │ Employee Biz  │ │ Cache Service │
                        └───────┬───────┘ └───────┬───────┘
-                                  │                       │
-                                  ▼                       ▼
+                               │                 │
+                               ▼                 ▼
                        ┌───────────────┐ ┌───────────────┐
-                       │ SQL Database      │ │ Redis Database     │
+                       │ SQL Database  │ │ Redis Database│
                        └───────────────┘ └───────────────┘
 
 
