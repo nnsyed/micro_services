@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS employees (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        role VARCHAR(100) NOT NULL,
+        department VARCHAR(100) NOT NULL
+    );
+
+    INSERT INTO employees (name, role, department) VALUES
+    ('Alice Smith', 'Lead Software Engineer', 'Engineering'),
+    ('Bob Jones', 'Cloud Architect', 'Infrastructure'),
+    ('Charlie Brown', 'Database Administrator', 'Sustenance Engineering')
+    ON CONFLICT DO NOTHING;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql-db
+  template:
+    metadata:
+      labels:
+        app: sql-db
+    spec:
+      containers:
+      - name: sql-db
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: employeedb
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: mysecretpassword
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: init-sql-volume
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: init-sql-volume
+        configMap:
+          name: postgres-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-sql-db-1
+spec:
+  selector:
+    app: sql-db
+  ports:
+  - port: 5432
+    targetPort: 5432

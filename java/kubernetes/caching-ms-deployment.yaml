@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache-service
+  template:
+    metadata:
+      labels:
+        app: cache-service
+    spec:
+      containers:
+      - name: cache-service
+        image: cache-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+          name: http
+        env:
+        - name: SERVER_PORT
+          value: "8002"
+        - name: SPRING_DATA_REDIS_HOST
+          value: "redis-db"
+        - name: SPRING_DATA_REDIS_PORT
+          value: "6379"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-service
+spec:
+  selector:
+    app: cache-service
+  ports:
+    - port: 8002
+      targetPort: 8002
+      name: http
+  type: ClusterIP
