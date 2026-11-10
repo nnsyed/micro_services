@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: employee-service-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: employee-service
@@ -33,10 +33,10 @@ kind: Service
 metadata:
   name: employee-service
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: employee-service
   ports:
   - port: 8001
     targetPort: 8001
-    nodePort: 30001
+

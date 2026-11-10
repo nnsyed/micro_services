@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: cache-deployment
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: cache-service
@@ -33,10 +33,10 @@ kind: Service
 metadata:
   name: cache-service
 spec:
+  type: ClusterIP
   selector:
     app: cache-service
   ports:
     - port: 8002
       targetPort: 8002
       name: http
-  type: ClusterIP
