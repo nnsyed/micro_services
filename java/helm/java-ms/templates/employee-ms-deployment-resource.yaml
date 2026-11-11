@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-service-deployment
+spec:
+  replicas: {{ .Values.employeeMs.replicas }}
+  selector:
+    matchLabels:
+      app: employee-service
+  template:
+    metadata:
+      labels:
+        app: employee-service
+    spec:
+      containers:
+      - name: employee-service
+        image: {{ .Values.employeeMs.image | quote }}
+        imagePullPolicy: {{ .Values.employeeMs.imagePullPolicy }}
+        env:
+        - name: SERVER_PORT
+          value: '8001'
+        - name: SPRING_DATASOURCE_URL
+          value: {{ printf "jdbc:postgresql://java-sql-db-1:%v/%s" .Values.postgres.service.port .Values.postgres.database | quote }}
+        - name: SPRING_DATASOURCE_USERNAME
+          value: postgres
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.postgres.existingSecret | quote }}
+              key: {{ .Values.postgres.passwordKey | quote }}
+        ports:
+        - containerPort: {{ .Values.employeeMs.containerPort }}

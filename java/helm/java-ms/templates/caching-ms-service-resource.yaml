@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-service
+spec:
+  type: {{ .Values.cachingMs.service.type }}
+  selector:
+    app: cache-service
+  ports:
+  - port: {{ .Values.cachingMs.service.port }}
+    targetPort: {{ .Values.cachingMs.containerPort }}
+    name: http

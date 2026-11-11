@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-deployment
+spec:
+  replicas: {{ .Values.cachingMs.replicas }}
+  selector:
+    matchLabels:
+      app: cache-service
+  template:
+    metadata:
+      labels:
+        app: cache-service
+    spec:
+      containers:
+      - name: cache-service
+        image: {{ .Values.cachingMs.image | quote }}
+        imagePullPolicy: {{ .Values.cachingMs.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.cachingMs.containerPort }}
+          name: http
+        env:
+        - name: SERVER_PORT
+          value: '8002'
+        - name: SPRING_DATA_REDIS_HOST
+          value: redis-db
+        - name: SPRING_DATA_REDIS_PORT
+          value: '6379'
+      restartPolicy: Always

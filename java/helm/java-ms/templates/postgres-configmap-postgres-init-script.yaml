@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS employees (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        role VARCHAR(100) NOT NULL,
+        department VARCHAR(100) NOT NULL
+    );
+
+    INSERT INTO employees (name, role, department) VALUES
+    ('Alice Smith', 'Lead Software Engineer', 'Engineering'),
+    ('Bob Jones', 'Cloud Architect', 'Infrastructure'),
+    ('Charlie Brown', 'Database Administrator', 'Sustenance Engineering')
+    ON CONFLICT DO NOTHING;

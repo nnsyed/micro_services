@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-gateway-config
+data:
+  nginx.conf: "events { worker_connections 1024; }\nhttp {\n  server {\n    listen 80;\n    \n    # ----------------------\
+    \ employee service ------------------------\n    # Handle request without trailing slash\n    location /api/employees\
+    \ {\n      proxy_pass http://employee-service:8001/employees;\n      proxy_set_header Host $host;\n      proxy_set_header\
+    \ X-Real-IP $remote_addr;\n      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n\n    # Handle request\
+    \ with trailing slash - explicitly target /employees\n    location /api/employees/ {\n      proxy_pass http://employee-service:8001/employees;\n\
+    \      proxy_set_header Host $host;\n      proxy_set_header X-Real-IP $remote_addr;\n      proxy_set_header X-Forwarded-For\
+    \ $proxy_add_x_forwarded_for;\n    }\n\n    # ---------------------- cache service ------------------------\n    # Handle\
+    \ request without trailing slash\n    location /api/cache {\n      proxy_pass http://cache-service:8002/cache;\n     \
+    \ proxy_set_header Host $host;\n      proxy_set_header X-Real-IP $remote_addr;\n      proxy_set_header X-Forwarded-For\
+    \ $proxy_add_x_forwarded_for;\n    }\n\n    # Handle request with trailing slash - explicitly target /caches\n    location\
+    \ /api/cache/ {\n      proxy_pass http://cache-service:8002/cache;\n      proxy_set_header Host $host;\n      proxy_set_header\
+    \ X-Real-IP $remote_addr;\n      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n\n    # Root fallback\
+    \ for health checks\n    location / {\n      return 200 \"API Gateway is running!\";\n      add_header Content-Type text/plain;\n\
+    \    }\n  }\n}\n"

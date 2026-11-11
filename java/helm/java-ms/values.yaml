@@ -1,0 +1,58 @@
+# Matches original manifests; change image tags and ports as needed.
+# Create postgres-credentials Secret separately; do not commit database passwords.
+apiGateway:
+  replicas: 1
+  image: nginx:alpine
+  imagePullPolicy: IfNotPresent
+  containerPort: 80
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30080
+cachingMs:
+  replicas: 2
+  image: cache-service:latest
+  imagePullPolicy: Never
+  containerPort: 8002
+  service:
+    type: ClusterIP
+    port: 8002
+employeeMs:
+  replicas: 3
+  image: employee-service:latest
+  imagePullPolicy: Never
+  containerPort: 8001
+  service:
+    type: ClusterIP
+    port: 8001
+frontend:
+  replicas: 1
+  image: nginx:alpine
+  imagePullPolicy: IfNotPresent
+  containerPort: 80
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30081
+postgres:
+  replicas: 1
+  image: postgres:15-alpine
+  containerPort: 5432
+  database: employeedb
+  username: postgres
+  existingSecret: postgres-credentials
+  passwordKey: password
+  service:
+    type: ClusterIP
+    port: 5432
+redis:
+  replicas: 1
+  image: redis:7-alpine
+  containerPort: 6379
+  service:
+    type: ClusterIP
+    port: 6379
+  persistence:
+    claimName: redis-pvc
+    size: 1Gi
+    accessMode: ReadWriteOnce

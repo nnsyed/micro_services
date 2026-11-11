@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-service
+spec:
+  type: {{ .Values.employeeMs.service.type }}
+  selector:
+    app: employee-service
+  ports:
+  - port: {{ .Values.employeeMs.service.port }}
+    targetPort: {{ .Values.employeeMs.containerPort }}
